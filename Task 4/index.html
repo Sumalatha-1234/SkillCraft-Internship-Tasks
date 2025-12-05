@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Todo App - Glass UI</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React + ReactDOM (UMD) -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+  <!-- Babel for JSX support in browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Lucide UMD (icons as data-lucide attributes) -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <style>
+    /* small extra to make glass corners smooth on outer container */
+    html,body,#root { height: 100%; }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4 md:p-8">
+
+  <div id="root"></div>
+
+  <!-- App script -->
+  <script type="text/babel">
+    // Use React hooks from global React
+    const { useState, useEffect } = React;
+
+    function TodoApp() {
+      const [tasks, setTasks] = useState([]);
+      const [newTask, setNewTask] = useState('');
+      const [editingId, setEditingId] = useState(null);
+      const [editText, setEditText] = useState('');
+      const [editDate, setEditDate] = useState('');
+      const [editTime, setEditTime] = useState('');
+      const [showDatePicker, setShowDatePicker] = useState(false);
+      const [tempDate, setTempDate] = useState('');
+      const [tempTime, setTempTime] = useState('');
+
+      // Ensure lucide replaces icon placeholders after render
+      useEffect(() => {
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+          // small timeout to ensure DOM nodes are present (safe)
+          window.lucide.createIcons();
+        }
+      }, [tasks, editingId, showDatePicker]);
+
+      const addTask = () => {
+        if (newTask.trim()) {
+          const task = {
+            id: Date.now(),
+            text: newTask,
+            completed: false,
+            date: tempDate,
+            time: tempTime,
+            createdAt: new Date().toISOString()
+          };
+          setTasks([task, ...tasks]);
+          setNewTask('');
+          setTempDate('');
+          setTempTime('');
+          setShowDatePicker(false);
+        }
+      };
+
+      const toggleComplete = (id) => {
+        setTasks(tasks.map(task =>
+          task.id === id ? { ...task, completed: !task.completed } : task
+        ));
+      };
+
+      const deleteTask = (id) => {
+        setTasks(tasks.filter(task => task.id !== id));
+      };
+
+      const startEdit = (task) => {
+        setEditingId(task.id);
+        setEditText(task.text);
+        setEditDate(task.date || '');
+        setEditTime(task.time || '');
+      };
+
+      const saveEdit = () => {
+        setTasks(tasks.map(task =>
+          task.id === editingId
+            ? { ...task, text: editText, date: editDate, time: editTime }
+            : task
+        ));
+        setEditingId(null);
+        setEditText('');
+        setEditDate('');
+        setEditTime('');
+      };
+
+      const cancelEdit = () => {
+        setEditingId(null);
+        setEditText('');
+        setEditDate('');
+        setEditTime('');
+      };
+
+      const handleKeyPress = (e, action) => {
+        if (e.key === 'Enter') {
+          action();
+        }
+      };
+
+      const formatDateTime = (date, time) => {
+        if (!date && !time) return null;
+        const parts = [];
+        if (date) {
+          const d = new Date(date);
+          parts.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
+        }
+        if (time) {
+          parts.push(time);
+        }
+        return parts.join(' at ');
+      };
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4 md:p-8">
+          <div className="max-w-4xl mx-auto">
+            {/* Header */}
+            <div className="text-center mb-12">
+              <div className="inline-block bg-cyan-500/10 backdrop-blur-md p-4 rounded-2xl mb-4 border border-white/5 shadow-sm">
+                <div className="text-5xl">📝</div>
+              </div>
+              <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                TO-DO WEB APP
+              </h1>
+              <p className="text-slate-400">Organize your tasks efficiently</p>
+            </div>
+
+            {/* Add Task Section */}
+            <div className="bg-slate-800/40 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-slate-700/30 shadow-xl">
+              <div className="flex gap-3 mb-4">
+                <input
+                  type="text"
+                  value={newTask}
+                  onChange={(e) => setNewTask(e.target.value)}
+                  onKeyPress={(e) => handleKeyPress(e, addTask)}
+                  placeholder="Add a new task..."
+                  className="flex-1 bg-slate-900/40 border border-slate-600 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                />
+                <button
+                  onClick={() => setShowDatePicker(!showDatePicker)}
+                  className="bg-slate-700 hover:bg-slate-600 rounded-xl px-4 py-3 transition-colors"
+                  title="Set Date & Time"
+                  aria-label="toggle date picker"
+                >
+                  <i data-lucide="calendar" className="w-5 h-5"></i>
+                </button>
+                <button
+                  onClick={addTask}
+                  className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 rounded-xl px-6 py-3 font-semibold transition-all shadow-lg shadow-cyan-500/30"
+                  aria-label="add task"
+                >
+                  <i data-lucide="plus" className="w-5 h-5"></i>
+                </button>
+              </div>
+
+              {showDatePicker && (
+                <div className="flex gap-3 animate-in slide-in-from-top">
+                  <input
+                    type="date"
+                    value={tempDate}
+                    onChange={(e) => setTempDate(e.target.value)}
+                    className="flex-1 bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
+                  />
+                  <input
+                    type="time"
+                    value={tempTime}
+                    onChange={(e) => setTempTime(e.target.value)}
+                    className="flex-1 bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Task Stats */}
+            <div className="flex gap-4 mb-6">
+              <div className="flex-1 bg-slate-800/30 backdrop-blur-sm rounded-xl p-4 border border-slate-700/30">
+                <div className="text-slate-400 text-sm mb-1">Total Tasks</div>
+                <div className="text-2xl font-bold">{tasks.length}</div>
+              </div>
+              <div className="flex-1 bg-slate-800/30 backdrop-blur-sm rounded-xl p-4 border border-slate-700/30">
+                <div className="text-slate-400 text-sm mb-1">Completed</div>
+                <div className="text-2xl font-bold text-green-400">
+                  {tasks.filter(t => t.completed).length}
+                </div>
+              </div>
+              <div className="flex-1 bg-slate-800/30 backdrop-blur-sm rounded-xl p-4 border border-slate-700/30">
+                <div className="text-slate-400 text-sm mb-1">Pending</div>
+                <div className="text-2xl font-bold text-cyan-400">
+                  {tasks.filter(t => !t.completed).length}
+                </div>
+              </div>
+            </div>
+
+            {/* Tasks List */}
+            <div className="space-y-3">
+              {tasks.length === 0 ? (
+                <div className="text-center py-16 text-slate-500">
+                  <div className="text-6xl mb-4">📋</div>
+                  <p className="text-xl">No tasks yet. Add one to get started!</p>
+                </div>
+              ) : (
+                tasks.map(task => (
+                  <div
+                    key={task.id}
+                    className={`bg-slate-800/40 backdrop-blur-sm rounded-xl p-4 border transition-all ${
+                      task.completed
+                        ? 'border-green-500/30 bg-green-500/5'
+                        : 'border-slate-700/30 hover:border-slate-600'
+                    } shadow-lg`}
+                  >
+                    {editingId === task.id ? (
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          onKeyPress={(e) => handleKeyPress(e, saveEdit)}
+                          className="w-full bg-slate-900/50 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
+                          autoFocus
+                        />
+                        <div className="flex gap-3">
+                          <input
+                            type="date"
+                            value={editDate}
+                            onChange={(e) => setEditDate(e.target.value)}
+                            className="flex-1 bg-slate-900/50 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
+                          />
+                          <input
+                            type="time"
+                            value={editTime}
+                            onChange={(e) => setEditTime(e.target.value)}
+                            className="flex-1 bg-slate-900/50 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
+                          />
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            onClick={cancelEdit}
+                            className="bg-slate-700 hover:bg-slate-600 rounded-lg px-4 py-2 transition-colors flex items-center gap-2"
+                          >
+                            <i data-lucide="x" className="w-4 h-4"></i>
+                            Cancel
+                          </button>
+                          <button
+                            onClick={saveEdit}
+                            className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 rounded-lg px-4 py-2 transition-all flex items-center gap-2"
+                          >
+                            <i data-lucide="check" className="w-4 h-4"></i>
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-4">
+                        <button
+                          onClick={() => toggleComplete(task.id)}
+                          className={`flex-shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all mt-1 ${
+                            task.completed
+                              ? 'bg-green-500 border-green-500'
+                              : 'border-slate-600 hover:border-cyan-500'
+                          }`}
+                          aria-label={task.completed ? "mark as incomplete" : "mark as complete"}
+                        >
+                          {task.completed && <i data-lucide="check" className="w-4 h-4 text-white"></i>}
+                        </button>
+
+                        <div className="flex-1">
+                          <div className={`text-lg ${task.completed ? 'line-through text-slate-500' : 'text-white'}`}>
+                            {task.text}
+                          </div>
+                          {formatDateTime(task.date, task.time) && (
+                            <div className="flex items-center gap-2 mt-2 text-sm text-slate-400">
+                              <i data-lucide="calendar" className="w-4 h-4"></i>
+                              <span>{formatDateTime(task.date, task.time)}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => startEdit(task)}
+                            className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <i data-lucide="edit-2" className="w-4 h-4"></i>
+                          </button>
+                          <button
+                            onClick={() => deleteTask(task.id)}
+                            className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <i data-lucide="trash-2" className="w-4 h-4"></i>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="text-center mt-12 text-slate-500 text-sm">
+              SkillCraft Technology
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Render the app
+    ReactDOM.createRoot(document.getElementById("root")).render(<TodoApp />);
+  </script>
+
+  <!-- ensure icons are created initially (in case initial render finished before our useEffect) -->
+  <script>
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
+  </script>
+</body>
+</html>
+
